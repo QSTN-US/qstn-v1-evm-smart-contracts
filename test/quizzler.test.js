@@ -10,7 +10,7 @@ describe("Quizzler testing", function () {
 
     const Quizzler = await ethers.getContractFactory("Quizzler");
     const quizzler = await upgrades.deployProxy(Quizzler);
-    await quizzler.deployed();
+    await quizzler.waitForDeployment();
 
     await quizzler.setManager(this.admin.address, true);
     await quizzler.setGasStation(this.admin.address, this.admin.address);
@@ -29,10 +29,10 @@ describe("Quizzler testing", function () {
 
   it("should not allow non-owners to set a manager", async function () {
     await expect(
-      this.quizzler.connect(this.other).setManager(this.other.address, true)
+      this.quizzler.connect(this.other).setManager(this.other.address, true),
     ).to.be.revertedWithCustomError(
       this.quizzler,
-      "OwnableUnauthorizedAccount"
+      "OwnableUnauthorizedAccount",
     );
   });
 
@@ -45,10 +45,10 @@ describe("Quizzler testing", function () {
     await expect(
       this.quizzler
         .connect(this.other)
-        .setGasStation(this.other.address, this.admin.address)
+        .setGasStation(this.other.address, this.admin.address),
     ).to.be.revertedWithCustomError(
       this.quizzler,
-      "OwnableUnauthorizedAccount"
+      "OwnableUnauthorizedAccount",
     );
   });
 });
@@ -62,7 +62,7 @@ describe("Quizzler creation", function () {
 
     const Quizzler = await ethers.getContractFactory("Quizzler");
     const quizzler = await upgrades.deployProxy(Quizzler);
-    await quizzler.deployed();
+    await quizzler.waitForDeployment();
 
     await quizzler.setManager(this.admin.address, true);
     await quizzler.setGasStation(this.admin.address, this.admin.address);
@@ -70,7 +70,7 @@ describe("Quizzler creation", function () {
     this.quizzler = quizzler;
 
     this.expireTS = Date.now() + 10000;
-    this.proofToken = ethers.utils.randomBytes(32);
+    this.proofToken = ethers.randomBytes(32);
 
     this.message = await this.quizzler.createProof(
       this.proofToken,
@@ -78,16 +78,14 @@ describe("Quizzler creation", function () {
       this.user.address,
       "1",
       100,
-      ethers.utils.parseEther("1"),
-      ethers.utils.formatBytes32String("hash"),
-      ethers.utils.parseEther("1")
+      ethers.parseEther("1"),
+      ethers.encodeBytes32String("hash"),
+      ethers.parseEther("1"),
     );
   });
 
   it("should prevent creating a survey with existing ID", async function () {
-    let signature = await this.admin.signMessage(
-      ethers.utils.arrayify(this.message)
-    );
+    let signature = await this.admin.signMessage(ethers.getBytes(this.message));
 
     await this.quizzler
       .connect(this.user)
@@ -98,28 +96,26 @@ describe("Quizzler creation", function () {
         this.user.address,
         "1",
         100,
-        ethers.utils.parseEther("1"),
-        ethers.utils.formatBytes32String("hash"),
-        ethers.utils.parseEther("1"),
-        { value: ethers.utils.parseEther("101") }
+        ethers.parseEther("1"),
+        ethers.encodeBytes32String("hash"),
+        ethers.parseEther("1"),
+        { value: ethers.parseEther("101") },
       );
 
     this.expireTS = Date.now() + 10000;
-    this.proofToken = ethers.utils.randomBytes(32);
+    this.proofToken = ethers.randomBytes(32);
     this.message = await this.quizzler.createProof(
       this.proofToken,
       this.expireTS,
       this.user.address,
       "1",
       100,
-      ethers.utils.parseEther("1"),
-      ethers.utils.formatBytes32String("hash"),
-      ethers.utils.parseEther("1")
+      ethers.parseEther("1"),
+      ethers.encodeBytes32String("hash"),
+      ethers.parseEther("1"),
     );
 
-    signature = await this.admin.signMessage(
-      ethers.utils.arrayify(this.message)
-    );
+    signature = await this.admin.signMessage(ethers.getBytes(this.message));
 
     await expect(
       this.quizzler
@@ -131,17 +127,17 @@ describe("Quizzler creation", function () {
           this.user.address,
           "1",
           100,
-          ethers.utils.parseEther("1"),
-          ethers.utils.formatBytes32String("hash"),
-          ethers.utils.parseEther("1"),
-          { value: ethers.utils.parseEther("101") }
-        )
+          ethers.parseEther("1"),
+          ethers.encodeBytes32String("hash"),
+          ethers.parseEther("1"),
+          { value: ethers.parseEther("101") },
+        ),
     ).to.be.revertedWith("Quizzler: survey already exists");
   });
 
   it("should allow survey creator to fund the survey", async function () {
     const signature = await this.admin.signMessage(
-      ethers.utils.arrayify(this.message)
+      ethers.getBytes(this.message),
     );
 
     await expect(
@@ -154,17 +150,17 @@ describe("Quizzler creation", function () {
           this.user.address,
           "1",
           100,
-          ethers.utils.parseEther("1"),
-          ethers.utils.formatBytes32String("hash"),
-          ethers.utils.parseEther("1"),
-          { value: ethers.utils.parseEther("101") }
-        )
+          ethers.parseEther("1"),
+          ethers.encodeBytes32String("hash"),
+          ethers.parseEther("1"),
+          { value: ethers.parseEther("101") },
+        ),
     ).to.emit(this.quizzler, "SurveyFunded");
   });
 
   it("should not allow non-creators or unauthorized funding", async function () {
     const signature = await this.other.signMessage(
-      ethers.utils.arrayify(this.message)
+      ethers.getBytes(this.message),
     );
 
     await expect(
@@ -177,11 +173,11 @@ describe("Quizzler creation", function () {
           this.admin.address,
           "1",
           100,
-          ethers.utils.parseEther("1"),
-          ethers.utils.formatBytes32String("hash"),
-          ethers.utils.parseEther("1"),
-          { value: ethers.utils.parseEther("101") }
-        )
+          ethers.parseEther("1"),
+          ethers.encodeBytes32String("hash"),
+          ethers.parseEther("1"),
+          { value: ethers.parseEther("101") },
+        ),
     ).to.be.revertedWith("Quizzler: only survey creator can fund the survey");
 
     await expect(
@@ -192,11 +188,11 @@ describe("Quizzler creation", function () {
         this.admin.address,
         "1",
         100,
-        ethers.utils.parseEther("1"),
-        ethers.utils.formatBytes32String("hash"),
-        ethers.utils.parseEther("1"),
-        { value: ethers.utils.parseEther("101") }
-      )
+        ethers.parseEther("1"),
+        ethers.encodeBytes32String("hash"),
+        ethers.parseEther("1"),
+        { value: ethers.parseEther("101") },
+      ),
     ).to.be.revertedWith("Quizzler: invalid signer");
   });
 });
@@ -209,7 +205,7 @@ describe("Quizzler pay rewards", function () {
 
     const Quizzler = await ethers.getContractFactory("Quizzler");
     const quizzler = await upgrades.deployProxy(Quizzler);
-    await quizzler.deployed();
+    await quizzler.waitForDeployment();
 
     await quizzler.setManager(this.admin.address, true);
     await quizzler.setGasStation(this.admin.address, this.admin.address);
@@ -217,7 +213,7 @@ describe("Quizzler pay rewards", function () {
     this.quizzler = quizzler;
 
     this.expireTS = Date.now() + 10000;
-    this.proofToken = ethers.utils.randomBytes(32);
+    this.proofToken = ethers.randomBytes(32);
 
     this.message = await this.quizzler.createProof(
       this.proofToken,
@@ -225,13 +221,13 @@ describe("Quizzler pay rewards", function () {
       this.admin.address,
       "1",
       100,
-      ethers.utils.parseEther("1"),
-      ethers.utils.formatBytes32String("hash"),
-      ethers.utils.parseEther("1")
+      ethers.parseEther("1"),
+      ethers.encodeBytes32String("hash"),
+      ethers.parseEther("1"),
     );
 
     this.signature = await this.admin.signMessage(
-      ethers.utils.arrayify(this.message)
+      ethers.getBytes(this.message),
     );
 
     await this.quizzler.createSurvey(
@@ -241,10 +237,10 @@ describe("Quizzler pay rewards", function () {
       this.admin.address,
       "1",
       100,
-      ethers.utils.parseEther("1"),
-      ethers.utils.formatBytes32String("hash"),
-      ethers.utils.parseEther("1"),
-      { value: ethers.utils.parseEther("101") }
+      ethers.parseEther("1"),
+      ethers.encodeBytes32String("hash"),
+      ethers.parseEther("1"),
+      { value: ethers.parseEther("101") },
     );
   });
 
@@ -253,17 +249,17 @@ describe("Quizzler pay rewards", function () {
     const participants = [this.signers[2].address, this.signers[3].address];
 
     this.expireTS = Date.now() + 10000;
-    this.proofToken = ethers.utils.randomBytes(32);
+    this.proofToken = ethers.randomBytes(32);
 
     this.message = await this.quizzler.rewardProof(
       this.proofToken,
       this.expireTS,
       surveys,
-      participants
+      participants,
     );
 
     this.signature = await this.admin.signMessage(
-      ethers.utils.arrayify(this.message)
+      ethers.getBytes(this.message),
     );
 
     await expect(
@@ -272,8 +268,8 @@ describe("Quizzler pay rewards", function () {
         this.proofToken,
         this.expireTS,
         surveys,
-        participants
-      )
+        participants,
+      ),
     ).to.emit(this.quizzler, "RewardPaid");
   });
 
@@ -282,17 +278,17 @@ describe("Quizzler pay rewards", function () {
     const participants = [this.signers[2].address, this.signers[3].address];
 
     this.expireTS = Date.now() + 10000;
-    this.proofToken = ethers.utils.randomBytes(32);
+    this.proofToken = ethers.randomBytes(32);
 
     this.message = await this.quizzler.rewardProof(
       this.proofToken,
       this.expireTS,
       surveys,
-      participants
+      participants,
     );
 
     this.signature = await this.signers[2].signMessage(
-      ethers.utils.arrayify(this.message)
+      ethers.getBytes(this.message),
     );
 
     await expect(
@@ -303,8 +299,8 @@ describe("Quizzler pay rewards", function () {
           this.proofToken,
           this.expireTS,
           surveys,
-          participants
-        )
+          participants,
+        ),
     ).to.be.revertedWith("Quizzler: invalid signer");
   });
 });
@@ -317,7 +313,7 @@ describe("Quizzler cancel survey", function () {
 
     const Quizzler = await ethers.getContractFactory("Quizzler");
     const quizzler = await upgrades.deployProxy(Quizzler);
-    await quizzler.deployed();
+    await quizzler.waitForDeployment();
 
     await quizzler.setManager(this.admin.address, true);
     await quizzler.setGasStation(this.admin.address, this.admin.address);
@@ -325,7 +321,7 @@ describe("Quizzler cancel survey", function () {
     this.quizzler = quizzler;
 
     this.expireTS = Date.now() + 10000;
-    this.proofToken = ethers.utils.randomBytes(32);
+    this.proofToken = ethers.randomBytes(32);
 
     this.message = await this.quizzler.createProof(
       this.proofToken,
@@ -333,13 +329,13 @@ describe("Quizzler cancel survey", function () {
       this.admin.address,
       "1",
       100,
-      ethers.utils.parseEther("1"),
-      ethers.utils.formatBytes32String("hash"),
-      ethers.utils.parseEther("1")
+      ethers.parseEther("1"),
+      ethers.encodeBytes32String("hash"),
+      ethers.parseEther("1"),
     );
 
     const signature = await this.admin.signMessage(
-      ethers.utils.arrayify(this.message)
+      ethers.getBytes(this.message),
     );
 
     await this.quizzler.createSurvey(
@@ -349,21 +345,21 @@ describe("Quizzler cancel survey", function () {
       this.admin.address,
       "1",
       100,
-      ethers.utils.parseEther("1"),
-      ethers.utils.formatBytes32String("hash"),
-      ethers.utils.parseEther("1"),
-      { value: ethers.utils.parseEther("101") }
+      ethers.parseEther("1"),
+      ethers.encodeBytes32String("hash"),
+      ethers.parseEther("1"),
+      { value: ethers.parseEther("101") },
     );
 
     this.expireTS = Date.now() + 10000;
-    this.proofToken = ethers.utils.randomBytes(32);
+    this.proofToken = ethers.randomBytes(32);
     this.message = await this.quizzler.cancelProof(
       this.proofToken,
       this.expireTS,
-      "1"
+      "1",
     );
     this.signature = await this.admin.signMessage(
-      ethers.utils.arrayify(this.message)
+      ethers.getBytes(this.message),
     );
   });
 
@@ -373,8 +369,8 @@ describe("Quizzler cancel survey", function () {
         this.signature,
         this.proofToken,
         this.expireTS,
-        "1"
-      )
+        "1",
+      ),
     )
       .to.emit(this.quizzler, "SurveyCanceled")
       .withArgs("1");
@@ -386,12 +382,12 @@ describe("Quizzler cancel survey", function () {
       this.signature,
       this.proofToken,
       this.expireTS,
-      "1"
+      "1",
     );
     const finalBalance = await ethers.provider.getBalance(this.admin.address);
-    expect(finalBalance.sub(initialBalance)).to.be.closeTo(
-      ethers.utils.parseEther("100"),
-      ethers.utils.parseEther("0.01")
+    expect(finalBalance - initialBalance).to.be.closeTo(
+      ethers.parseEther("100"),
+      ethers.parseEther("0.01"),
     );
   });
 
@@ -399,9 +395,9 @@ describe("Quizzler cancel survey", function () {
     await expect(
       this.quizzler
         .connect(this.other)
-        .cancelSurvey(this.signature, this.proofToken, this.expireTS, "1")
+        .cancelSurvey(this.signature, this.proofToken, this.expireTS, "1"),
     ).to.be.revertedWith(
-      "Quizzler: only survey creator or manager can cancel the survey"
+      "Quizzler: only survey creator or manager can cancel the survey",
     );
   });
 
@@ -410,18 +406,18 @@ describe("Quizzler cancel survey", function () {
       this.signature,
       this.proofToken,
       this.expireTS,
-      "1"
+      "1",
     );
 
     this.expireTS = Date.now() + 10000;
-    this.proofToken = ethers.utils.randomBytes(32);
+    this.proofToken = ethers.randomBytes(32);
     this.message = await this.quizzler.cancelProof(
       this.proofToken,
       this.expireTS,
-      "1"
+      "1",
     );
     this.signature = await this.admin.signMessage(
-      ethers.utils.arrayify(this.message)
+      ethers.getBytes(this.message),
     );
 
     await expect(
@@ -429,14 +425,14 @@ describe("Quizzler cancel survey", function () {
         this.signature,
         this.proofToken,
         this.expireTS,
-        "1"
-      )
+        "1",
+      ),
     ).to.be.revertedWith("Quizzler: survey is already canceled");
   });
 
   it("should prevent cancelation after payments", async function () {
     this.expireTS = Date.now() + 10000;
-    this.proofToken = ethers.utils.randomBytes(32);
+    this.proofToken = ethers.randomBytes(32);
 
     this.message = await this.quizzler.createProof(
       this.proofToken,
@@ -444,13 +440,13 @@ describe("Quizzler cancel survey", function () {
       this.admin.address,
       "2",
       2,
-      ethers.utils.parseEther("1"),
-      ethers.utils.formatBytes32String("hash"),
-      ethers.utils.parseEther("1")
+      ethers.parseEther("1"),
+      ethers.encodeBytes32String("hash"),
+      ethers.parseEther("1"),
     );
 
     this.signature = await this.admin.signMessage(
-      ethers.utils.arrayify(this.message)
+      ethers.getBytes(this.message),
     );
 
     await this.quizzler.createSurvey(
@@ -460,10 +456,10 @@ describe("Quizzler cancel survey", function () {
       this.admin.address,
       "2",
       2,
-      ethers.utils.parseEther("1"),
-      ethers.utils.formatBytes32String("hash"),
-      ethers.utils.parseEther("1"),
-      { value: ethers.utils.parseEther("3") }
+      ethers.parseEther("1"),
+      ethers.encodeBytes32String("hash"),
+      ethers.parseEther("1"),
+      { value: ethers.parseEther("3") },
     );
 
     // ________
@@ -472,17 +468,17 @@ describe("Quizzler cancel survey", function () {
     const participants = [this.signers[2].address, this.signers[3].address];
 
     this.expireTS = Date.now() + 10000;
-    this.proofToken = ethers.utils.randomBytes(32);
+    this.proofToken = ethers.randomBytes(32);
 
     this.message = await this.quizzler.rewardProof(
       this.proofToken,
       this.expireTS,
       surveys,
-      participants
+      participants,
     );
 
     this.signature = await this.admin.signMessage(
-      ethers.utils.arrayify(this.message)
+      ethers.getBytes(this.message),
     );
 
     await this.quizzler.payRewards(
@@ -490,18 +486,18 @@ describe("Quizzler cancel survey", function () {
       this.proofToken,
       this.expireTS,
       surveys,
-      participants
+      participants,
     );
 
     this.expireTS = Date.now() + 10000;
-    this.proofToken = ethers.utils.randomBytes(32);
+    this.proofToken = ethers.randomBytes(32);
     this.message = await this.quizzler.cancelProof(
       this.proofToken,
       this.expireTS,
-      "2"
+      "2",
     );
     this.signature = await this.admin.signMessage(
-      ethers.utils.arrayify(this.message)
+      ethers.getBytes(this.message),
     );
 
     await expect(
@@ -509,8 +505,8 @@ describe("Quizzler cancel survey", function () {
         this.signature,
         this.proofToken,
         this.expireTS,
-        "2"
-      )
+        "2",
+      ),
     ).to.be.revertedWith("Quizzler: all participants have been rewarded");
   });
 });

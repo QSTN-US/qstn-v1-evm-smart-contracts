@@ -21,7 +21,7 @@ async function main() {
   try {
     await run("verify:verify", {
       address: quizzlerImpl,
-      contract: "contracts/Quizzler.sol:Quizzler",
+      contract: "contracts/QuizzlerNFT.sol:QuizzlerNFT",
     });
   } catch (error) {
     console.log("Verify failed: ", error);
