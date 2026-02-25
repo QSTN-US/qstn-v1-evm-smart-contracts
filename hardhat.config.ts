@@ -75,6 +75,22 @@ const config: HardhatUserConfig = {
           browserURL: "https://arbiscan.io",
         },
       },
+      {
+        network: "avalanche-fuji",
+        chainId: 43113,
+        urls: {
+          apiURL: "https://api.routescan.io/v2/network/testnet/evm",
+          browserURL: "https://testnet.snowtrace.io",
+        },
+      },
+      {
+        network: "avalanche",
+        chainId: 43114,
+        urls: {
+          apiURL: "https://api.routescan.io/v2/network/mainnet/evm",
+          browserURL: "https://snowtrace.io",
+        },
+      },
     ],
   },
 
@@ -112,10 +128,26 @@ const config: HardhatUserConfig = {
       accounts: [DEPLOYER_PRIVATE_KEY],
       chainId: 42161,
     },
+    "avalanche-fuji": {
+      url: "https://api.avax-test.network/ext/bc/C/rpc",
+      gasPrice: 225000000000,
+      chainId: 43113,
+      accounts: [DEPLOYER_PRIVATE_KEY],
+    },
+    avalanche: {
+      url: "https://api.avax.network/ext/bc/C/rpc",
+      gasPrice: 225000000000,
+      chainId: 43113,
+      accounts: [DEPLOYER_PRIVATE_KEY],
+    },
   },
 
   mocha: {
     timeout: 1000000000000000,
+  },
+
+  sourcify: {
+    enabled: true,
   },
 };
 
