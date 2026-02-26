@@ -14,7 +14,7 @@ async function main() {
 
   const quizzlerImpl = await getImplementationAddress(
     ethers.provider,
-    quizzler.address
+    quizzler.address,
   );
   console.log(`Quizzler deployed to: ${quizzler.address} => ${quizzlerImpl}`);
 

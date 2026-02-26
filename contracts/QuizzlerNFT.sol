@@ -10,11 +10,7 @@ import "./QstnNFT.sol";
 
 /// @title A Quizzler contract for creating and managing surveys with NFT rewards
 /// @notice This contract allows for the creation, funding, and management of surveys and their NFT rewards
-contract QuizzlerNFT is
-    Initializable,
-    ReentrancyGuardUpgradeable,
-    OwnableUpgradeable
-{
+contract QuizzlerNFT is Initializable, ReentrancyGuardUpgradeable, OwnableUpgradeable {
     /// @notice Address used as gas station for the server's manager wallet
     address public gasStation;
 
@@ -63,11 +59,7 @@ contract QuizzlerNFT is
         bytes32 surveyHash
     );
     /// @notice Emitted when a survey is funded
-    event SurveyFunded(
-        string indexed surveyId,
-        address indexed creator,
-        uint256 fundingAmount
-    );
+    event SurveyFunded(string indexed surveyId, address indexed creator, uint256 fundingAmount);
     /// @notice Emitted when a reward is paid to a participant
     event RewardPaid(address indexed participant, string indexed surveyId);
     /// @notice Emitted when a survey is finished
@@ -79,10 +71,7 @@ contract QuizzlerNFT is
 
     /// @notice Ensures only managers can call a function
     modifier onlyManager() {
-        require(
-            managers[msg.sender],
-            "Quizzler: only manager or owner can call this function"
-        );
+        require(managers[msg.sender], "Quizzler: only manager or owner can call this function");
         _;
     }
 
@@ -111,10 +100,7 @@ contract QuizzlerNFT is
     /// @param _manager Address of the manager
     /// @param _status Boolean representing the desired manager status
     function setManager(address _manager, bool _status) external onlyOwner {
-        require(
-            _manager != address(0),
-            "PrivateStaking: invalid manager address"
-        );
+        require(_manager != address(0), "PrivateStaking: invalid manager address");
 
         managers[_manager] = _status;
 
@@ -124,18 +110,9 @@ contract QuizzlerNFT is
     /// @notice Allows the owner to specify the gas station address
     /// @param _gasStation Address of the gas station
     /// @param _gasOwner Address of the gas station owner
-    function setGasStation(
-        address _gasStation,
-        address _gasOwner
-    ) external onlyOwner {
-        require(
-            _gasStation != address(0),
-            "PrivateStaking: invalid gas station address"
-        );
-        require(
-            _gasOwner != address(0),
-            "PrivateStaking: invalid gas owner address"
-        );
+    function setGasStation(address _gasStation, address _gasOwner) external onlyOwner {
+        require(_gasStation != address(0), "PrivateStaking: invalid gas station address");
+        require(_gasOwner != address(0), "PrivateStaking: invalid gas owner address");
 
         gasStation = _gasStation;
         gasOwner = _gasOwner;
@@ -149,9 +126,7 @@ contract QuizzlerNFT is
     /// @return participantsRewarded The number of participants already rewarded
     /// @return surveyHash The unique hash of the survey for verification
     /// @return isCanceled Whether the survey has been canceled
-    function getSurvey(
-        string memory _surveyId
-    )
+    function getSurvey(string memory _surveyId)
         external
         view
         returns (
@@ -187,10 +162,7 @@ contract QuizzlerNFT is
         uint256 _participantsLimit,
         bytes32 _surveyHash
     ) internal returns (bool result) {
-        require(
-            surveys[_surveyId].surveyCreator == address(0),
-            "Quizzler: survey already exists"
-        );
+        require(surveys[_surveyId].surveyCreator == address(0), "Quizzler: survey already exists");
 
         QstnNFT newNFT = new QstnNFT(_name, _symbol, _baseTokenURI);
 
@@ -203,21 +175,13 @@ contract QuizzlerNFT is
             isCanceled: false
         });
 
-        emit SurveyCreated(
-            _surveyId,
-            msg.sender,
-            address(newNFT),
-            _participantsLimit,
-            _surveyHash
-        );
+        emit SurveyCreated(_surveyId, msg.sender, address(newNFT), _participantsLimit, _surveyHash);
 
         return true;
     }
 
     /// @notice Generates a proof for survey creating
-    function createProof(
-        SurveyCreationParams memory params
-    ) public view returns (bytes32 message) {
+    function createProof(SurveyCreationParams memory params) public view returns (bytes32 message) {
         if (proofTokens[params.token]) {
             message = bytes32(0);
         } else {
@@ -240,22 +204,11 @@ contract QuizzlerNFT is
     }
 
     /// @notice Funds a survey verifying all conditions are met
-    function createSurvey(
-        bytes memory _signature,
-        SurveyCreationParams memory params
-    ) external payable nonReentrant {
-        require(
-            msg.sender == params.owner,
-            "Quizzler: only survey creator can fund the survey"
-        );
+    function createSurvey(bytes memory _signature, SurveyCreationParams memory params) external payable nonReentrant {
+        require(msg.sender == params.owner, "Quizzler: only survey creator can fund the survey");
         bytes32 message = createProof(params);
 
-        address signer = preAuthValidations(
-            message,
-            params.token,
-            params.timeToExpire,
-            _signature
-        );
+        address signer = preAuthValidations(message, params.token, params.timeToExpire, _signature);
 
         require(
             _createSurvey(
@@ -270,68 +223,46 @@ contract QuizzlerNFT is
         );
 
         require(managers[signer], "Quizzler: invalid signer");
-        require(
-            msg.value == params.amountToGasStation,
-            "Quizzler: invalid trx value"
-        );
+        require(msg.value == params.amountToGasStation, "Quizzler: invalid trx value");
 
-        (bool success, ) = payable(gasStation).call{
-            value: params.amountToGasStation
-        }("");
+        (bool success,) = payable(gasStation).call{value: params.amountToGasStation}("");
         require(success, "Transfer failed");
 
         emit SurveyFunded(params.surveyId, msg.sender, msg.value);
     }
 
     /// @notice Generates a proof for survey cancellation
-    function cancelProof(
-        bytes32 _token,
-        uint256 _timeToExpire,
-        string memory _surveyId
-    ) public view returns (bytes32 message) {
+    function cancelProof(bytes32 _token, uint256 _timeToExpire, string memory _surveyId)
+        public
+        view
+        returns (bytes32 message)
+    {
         if (proofTokens[_token]) {
             message = bytes32(0);
         } else {
-            message = keccak256(
-                abi.encodePacked(getChainID(), _token, _timeToExpire, _surveyId)
-            );
+            message = keccak256(abi.encodePacked(getChainID(), _token, _timeToExpire, _surveyId));
         }
     }
 
     /// @notice Cancels a survey and refunds the unspent funds
-    function cancelSurvey(
-        bytes memory _signature,
-        bytes32 _token,
-        uint256 _timeToExpire,
-        string memory _surveyId
-    ) external nonReentrant {
+    function cancelSurvey(bytes memory _signature, bytes32 _token, uint256 _timeToExpire, string memory _surveyId)
+        external
+        nonReentrant
+    {
+        require(surveys[_surveyId].surveyCreator != address(0), "Quizzler: survey does not exist");
+        require(!surveys[_surveyId].isCanceled, "Quizzler: survey is already canceled");
         require(
-            surveys[_surveyId].surveyCreator != address(0),
-            "Quizzler: survey does not exist"
-        );
-        require(
-            !surveys[_surveyId].isCanceled,
-            "Quizzler: survey is already canceled"
-        );
-        require(
-            msg.sender == surveys[_surveyId].surveyCreator ||
-                managers[msg.sender],
+            msg.sender == surveys[_surveyId].surveyCreator || managers[msg.sender],
             "Quizzler: only survey creator or manager can cancel the survey"
         );
         require(
-            surveys[_surveyId].participantsLimit >
-                surveys[_surveyId].participantsRewarded,
+            surveys[_surveyId].participantsLimit > surveys[_surveyId].participantsRewarded,
             "Quizzler: all participants have been rewarded"
         );
 
         bytes32 message = cancelProof(_token, _timeToExpire, _surveyId);
 
-        address signer = preAuthValidations(
-            message,
-            _token,
-            _timeToExpire,
-            _signature
-        );
+        address signer = preAuthValidations(message, _token, _timeToExpire, _signature);
 
         require(managers[signer], "Quizzler: invalid signer");
 
@@ -351,13 +282,7 @@ contract QuizzlerNFT is
             message = bytes32(0);
         } else {
             message = keccak256(
-                abi.encodePacked(
-                    getChainID(),
-                    _token,
-                    _timeToExpire,
-                    _surveyIds.length,
-                    _participantsEncoded.length
-                )
+                abi.encodePacked(getChainID(), _token, _timeToExpire, _surveyIds.length, _participantsEncoded.length)
             );
         }
     }
@@ -375,51 +300,31 @@ contract QuizzlerNFT is
             "Quizzler: Mismatch between survey IDs and participant data lengths"
         );
 
-        bytes32 message = rewardProof(
-            _token,
-            _timeToExpire,
-            _surveyIds,
-            _participantsEncoded
-        );
+        bytes32 message = rewardProof(_token, _timeToExpire, _surveyIds, _participantsEncoded);
 
-        address signer = preAuthValidations(
-            message,
-            _token,
-            _timeToExpire,
-            _signature
-        );
+        address signer = preAuthValidations(message, _token, _timeToExpire, _signature);
 
         require(managers[signer], "Quizzler: invalid signer");
 
         for (uint256 j = 0; j < _participantsEncoded.length; j++) {
             string memory surveyId = _surveyIds[j];
+            require(!surveys[surveyId].isCanceled, "Quizzler: Survey has been canceled");
             require(
-                !surveys[surveyId].isCanceled,
-                "Quizzler: Survey has been canceled"
-            );
-            require(
-                surveys[surveyId].participantsRewarded <
-                    surveys[surveyId].participantsLimit,
+                surveys[surveyId].participantsRewarded < surveys[surveyId].participantsLimit,
                 "Quizzler: All participants have been rewarded"
             );
             require(
-                !surveysUsersRewarded[surveyId][_participantsEncoded[j]],
-                "Quizzler: User has already been rewarded"
+                !surveysUsersRewarded[surveyId][_participantsEncoded[j]], "Quizzler: User has already been rewarded"
             );
 
-            QstnNFT(surveys[surveyId].nftContract).mint(
-                _participantsEncoded[j]
-            );
+            QstnNFT(surveys[surveyId].nftContract).mint(_participantsEncoded[j]);
 
             surveys[surveyId].participantsRewarded++;
             surveysUsersRewarded[surveyId][_participantsEncoded[j]] = true;
 
             emit RewardPaid(_participantsEncoded[j], surveyId);
 
-            if (
-                surveys[surveyId].participantsRewarded ==
-                surveys[surveyId].participantsLimit
-            ) {
+            if (surveys[surveyId].participantsRewarded == surveys[surveyId].participantsLimit) {
                 emit SurveyFinished(surveyId);
             }
         }
@@ -431,21 +336,13 @@ contract QuizzlerNFT is
     /// @param _timeToExpire The time to expire the token
     /// @param _signature Signature
     /// @return address Signer of the message
-    function preAuthValidations(
-        bytes32 _message,
-        bytes32 _token,
-        uint256 _timeToExpire,
-        bytes memory _signature
-    ) public returns (address) {
+    function preAuthValidations(bytes32 _message, bytes32 _token, uint256 _timeToExpire, bytes memory _signature)
+        public
+        returns (address)
+    {
         require(_message != bytes32(0), "Quizzler: invalid message hash");
-        require(
-            !proofTokens[_token],
-            "Quizzler: proof token has already been used"
-        );
-        require(
-            block.timestamp <= _timeToExpire,
-            "Quizzler: proof token has expired"
-        );
+        require(!proofTokens[_token], "Quizzler: proof token has already been used");
+        require(block.timestamp <= _timeToExpire, "Quizzler: proof token has expired");
 
         address signer = getSigner(_message, _signature);
         require(signer != address(0), "Access: Zero address not allowed");
@@ -459,10 +356,7 @@ contract QuizzlerNFT is
     /// @param message The message that the user signed
     /// @param signature Signature
     /// @return address Signer of the message
-    function getSigner(
-        bytes32 message,
-        bytes memory signature
-    ) public pure returns (address) {
+    function getSigner(bytes32 message, bytes memory signature) public pure returns (address) {
         message = MessageHashUtils.toEthSignedMessageHash(message);
         address signer = ECDSA.recover(message, signature);
         return signer;
